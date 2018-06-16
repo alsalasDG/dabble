@@ -37,6 +37,32 @@ logger = logging.getLogger(__name__) # pylint: disable=invalid-name
 #                                   CLASSES                                   #
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+class Patch(object):
+    """
+    Represents a patch applied to part of the protein.
+    As patches can be applied to one or more residues, it allows
+    unlimited segids and resids inside.
+    """
+    def __init__(self, name, segids=[], resids=[]):
+        self.name = name
+        self.segids = segids
+        self.resids = resids
+
+    def __repr__(self):
+        return "%s %s" % (self.name,
+                          " ".join("%s:%s" % (x,y) for x,y in zip(self.segids,
+                                                                  self.resids))
+                          )
+
+    def add_patch(self, segid, resid):
+        self.segids.append(segid)
+        self.resids.append(resid)
+
+    def targets(self):
+        return zip(self.segids, self.resids)
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 class CharmmMatcher(MoleculeMatcher):
     """
     Represents a collection of graphs of all residues defined in the
@@ -96,7 +122,7 @@ class CharmmMatcher(MoleculeMatcher):
             selection (VMD atomsel): Selection that is patched
 
         Returns:
-            (str, str, dict) resname matched, patch applied,
+            (str, str, dict) resname matched, patch name applied,
               name translation dictionary
         """
         resname = selection.get('resname')[0]
@@ -111,7 +137,8 @@ class CharmmMatcher(MoleculeMatcher):
                 logger.info("Detected patch %s", names[1])
                 return (names[0], names[1], next(matcher.match()))
 
-        logger.error("Couldn't find a patch for resname '%s'. Dumping as 'rgraph.dot'", resname)
+        logger.error("Couldn't find a patch for resname '%s'."
+                     "Dumping as 'rgraph.dot'", resname)
         write_dot(rgraph, "rgraph.dot")
         return (None, None, None)
 
@@ -129,8 +156,8 @@ class CharmmMatcher(MoleculeMatcher):
             molid (int): VMD molecule of entire system (needed for disu partner)
 
         Returns:
-            (str, str, dict) resname matched, patch line to put directly
-              into psfgen, name translation dictionary
+            (str, Patch, dict) resname matched, patch object for psfgen,
+                name translation dictionary
        """
         selection = atomsel(selstring, molid=molid)
 
@@ -193,12 +220,13 @@ class CharmmMatcher(MoleculeMatcher):
                 first = selection
                 second = osel
 
-        patchline = "patch DISU P%d:%d P%d:%d\n" % (first.get("fragment")[0],
-                                                    first.get("resid")[0],
-                                                    second.get("fragment")[0],
-                                                    second.get("resid")[0])
+        patch = Patch(name="DISU",
+                      segids=[first.get("fragment")[0],
+                              second.get("fragment")[0]],
+                      resids=[first.get("resid")[0],
+                              second.get("resid")[0]])
 
-        return (matchname, patchline, atomnames)
+        return (matchname, patch, atomnames)
 
     #=========================================================================
 
