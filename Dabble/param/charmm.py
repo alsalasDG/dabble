@@ -171,7 +171,7 @@ class CharmmWriter(object):
 
             # List all patches applied to the protein
             print("Applying the following patches:\n")
-            print("\t%s" % "\t".join(extpatches))
+            print("\t%s" % "\n\t".join(str(_) for _ in extpatches))
 
             # Apply all multi segment patches to the protein
             for p in extpatches:
@@ -264,7 +264,7 @@ class CharmmWriter(object):
                 batch.write('pdb', temp)
                 allw.update()
 
-                self.psfgen.addSegment(segID="W%d" % i,
+                self.psfgen.addSegment(segid="W%d" % i,
                                        pdb=temp,
                                        first=None, last=None, auto=None,
                                        residues=None, mutate=None)
@@ -273,7 +273,7 @@ class CharmmWriter(object):
 
         # Now write the problem waters
         updb = self._write_unorderedindex_waters(problems, self.molid)
-        self.psfgen.addSegment(segID="W%d" % (num_written+1),
+        self.psfgen.addSegment(segid="W%d" % (num_written+1),
                                pdb=updb,
                                first=None, last=None, auto=None,
                                residues=None, mutate=None)
@@ -399,10 +399,10 @@ class CharmmWriter(object):
         alll.write('pdb', temp)
 
         # Generate lipid segment
-        self.psfgen.addSegment(segID="L", pdb=temp,
+        self.psfgen.addSegment(segid="L", pdb=temp,
                                first=None, last=None, auto=None,
                                mutate=None, residues=None)
-        self.psfgen.setCoords(segid="L", pdbfile=temp)
+        self.psfgen.readCoords(segid="L", pdbfile=temp)
 
         # Put old top back
         molecule.set_top(old_top)
@@ -452,10 +452,10 @@ class CharmmWriter(object):
         atomsel('name SOD CLA POT').set('user', 0.0) # mark as saved
         atomsel('name SOD CLA POT').write('pdb', temp)
 
-        self.psfgen.addSegment(segID="I", pdb=temp,
+        self.psfgen.addSegment(segid="I", pdb=temp,
                                first=None, last=None, auto=None,
                                residues=None, mutate=None)
-        self.psfgen.readCoords(segID="I", pdbfile=temp)
+        self.psfgen.readCoords(segid="I", pdbfile=temp)
 
         molecule.set_top(old_top)
 
@@ -554,11 +554,11 @@ class CharmmWriter(object):
         alig.write('pdb', temp)
         alig.set('user', 0.0)
 
-        self.psfgen.addSegment(segID="B%s" % residues[0],
+        self.psfgen.addSegment(segid="B%s" % residues[0],
                                pdb=temp,
                                first=None, last=None, auto=None,
                                residues=None, mutate=None)
-        self.psfgen.readCoords(segID="B%s" % residues[0],
+        self.psfgen.readCoords(segid="B%s" % residues[0],
                                pdbfile=temp)
 
         if old_top != -1:
@@ -634,7 +634,7 @@ class CharmmWriter(object):
               % (len(atomsel("fragment %s" % frag)), seg))
 
         # Now invoke psfgen for the protein segments
-        self.psfgen.addSegment(segID=seg, pdb=filename,
+        self.psfgen.addSegment(segid=seg, pdb=filename,
                                first=None, last=None, auto=None,
                                residues=None, mutate=None)
 
@@ -643,7 +643,7 @@ class CharmmWriter(object):
         for p in patches:
             self.psfgen.patch(patchName=p.name, targets=p.targets())
 
-        self.psfgen.readCoords(segID=seg, pdbfile=filename)
+        self.psfgen.readCoords(segid=seg, pdbfile=filename)
 
         if old_top != -1:
             molecule.set_top(old_top)

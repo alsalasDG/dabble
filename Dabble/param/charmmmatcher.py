@@ -51,8 +51,18 @@ class Patch(object):
     def __repr__(self):
         return "%s %s" % (self.name,
                           " ".join("%s:%s" % (x,y) for x,y in zip(self.segids,
-                                                                  self.resids))
-                          )
+                                                                  self.resids)))
+
+    def __eq__(self, other):
+        if isinstance(other, Patch):
+            return ((self.name == other.name) \
+                and (sorted(zip(self.segids, self.resids)) ==  \
+                     sorted(zip(other.segids, other.resids))))
+        else:
+            return False
+
+    def __hash__(self):
+        return hash(self.__repr__())
 
     def add_patch(self, segid, resid):
         self.segids.append(segid)
@@ -221,8 +231,8 @@ class CharmmMatcher(MoleculeMatcher):
                 second = osel
 
         patch = Patch(name="DISU",
-                      segids=[first.get("fragment")[0],
-                              second.get("fragment")[0]],
+                      segids=["P%d" % first.get("fragment")[0],
+                              "P%d" % second.get("fragment")[0]],
                       resids=[first.get("resid")[0],
                               second.get("resid")[0]])
 
