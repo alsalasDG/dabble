@@ -26,7 +26,7 @@ from __future__ import print_function
 import os
 import tempfile
 from pkg_resources import resource_filename
-from psfgen import Psfgen
+from psfgen import PsfGen
 from vmd import atomsel, molecule
 
 from Dabble import DabbleError
@@ -80,7 +80,7 @@ class CharmmWriter(object):
         self.lipid_sel = lipid_sel
 
         # Create a psf generator object
-        self.psfgen = Psfgen()
+        self.psfgen = PsfGen()
 
         self.molid = molid
         self.psf_name = ""
@@ -141,7 +141,7 @@ class CharmmWriter(object):
         print("Using the following topologies:")
         for top in self.topologies:
             print("  - %s" % top.split("/")[-1])
-            self.psfgen.readCharmmTopology(top)
+            self.psfgen.read_topology(top)
 
         # Mark all atoms as unsaved with the user field
         atomsel('all', molid=self.molid).set('user', 1.0)
@@ -182,8 +182,8 @@ class CharmmWriter(object):
         # Regenerate angles and dihedrals after applying patches
         # Angles must be regenerated FIRST!
         # See http://www.ks.uiuc.edu/Research/namd/mailing_list/namd-l.2009-2010/4137.html
-        self.psfgen.regenerateAngles()
-        self.psfgen.regenerateDihedrals()
+        self.psfgen.regenerate_angles()
+        self.psfgen.regenerate_dihedrals()
 
         # Check if there is anything else and let the user know about it
         leftovers = atomsel('user 1.0', molid=self.molid)
@@ -193,8 +193,8 @@ class CharmmWriter(object):
             self._write_generic_block(residues)
 
         # Write the output files and run
-        self.psfgen.writePSF(filename="%s.psf" % self.psf_name, type="x-plor")
-        self.psfgen.writePDB(filename="%s.pdb" % self.psf_name)
+        self.psfgen.write_psf(filename="%s.psf" % self.psf_name, type="x-plor")
+        self.psfgen.write_pdb(filename="%s.pdb" % self.psf_name)
         self._check_psf_output()
 
         # Reset top molecule
@@ -264,21 +264,13 @@ class CharmmWriter(object):
                 batch.write('pdb', temp)
                 allw.update()
 
-                self.psfgen.addSegment(segid="W%d" % i,
-                                       pdb=temp,
-                                       first=None, last=None, auto=None,
-                                       residues=None, mutate=None)
-                self.psfgen.readCoords(segid="W%d" % i,
-                                       pdbfile=temp)
+                self.psfgen.add_segment(segid="W%d" % i, pdbfile=temp)
+                self.psfgen.read_coords(segid="W%d" % i, filename=temp)
 
         # Now write the problem waters
         updb = self._write_unorderedindex_waters(problems, self.molid)
-        self.psfgen.addSegment(segid="W%d" % (num_written+1),
-                               pdb=updb,
-                               first=None, last=None, auto=None,
-                               residues=None, mutate=None)
-        self.psfgen.readCoords(segid="W%d" % (num_written+1),
-                               pdbfile=updb)
+        self.psfgen.add_segment(segid="W%d" % (num_written+1), pdbfile=updb)
+        self.psfgen.read_coords(segid="W%d" % (num_written+1), filename=updb)
 
         molecule.set_top(old_top)
 
@@ -399,10 +391,8 @@ class CharmmWriter(object):
         alll.write('pdb', temp)
 
         # Generate lipid segment
-        self.psfgen.addSegment(segid="L", pdb=temp,
-                               first=None, last=None, auto=None,
-                               mutate=None, residues=None)
-        self.psfgen.readCoords(segid="L", pdbfile=temp)
+        self.psfgen.add_segment(segid="L", pdbfile=temp)
+        self.psfgen.read_coords(segid="L", filename=temp)
 
         # Put old top back
         molecule.set_top(old_top)
@@ -452,10 +442,8 @@ class CharmmWriter(object):
         atomsel('name SOD CLA POT').set('user', 0.0) # mark as saved
         atomsel('name SOD CLA POT').write('pdb', temp)
 
-        self.psfgen.addSegment(segid="I", pdb=temp,
-                               first=None, last=None, auto=None,
-                               residues=None, mutate=None)
-        self.psfgen.readCoords(segid="I", pdbfile=temp)
+        self.psfgen.add_segment(segid="I", pdbfile=temp)
+        self.psfgen.read_coords(segid="I", filename=temp)
 
         molecule.set_top(old_top)
 
@@ -554,12 +542,9 @@ class CharmmWriter(object):
         alig.write('pdb', temp)
         alig.set('user', 0.0)
 
-        self.psfgen.addSegment(segid="B%s" % residues[0],
-                               pdb=temp,
-                               first=None, last=None, auto=None,
-                               residues=None, mutate=None)
-        self.psfgen.readCoords(segid="B%s" % residues[0],
-                               pdbfile=temp)
+        self.psfgen.add_segment(segid="B%s" % residues[0], pdbfile=temp)
+        self.psfgen.read_coords(segid="B%s" % residues[0],
+                                filename=temp)
 
         if old_top != -1:
             molecule.set_top(old_top)
@@ -634,16 +619,14 @@ class CharmmWriter(object):
               % (len(atomsel("fragment %s" % frag)), seg))
 
         # Now invoke psfgen for the protein segments
-        self.psfgen.addSegment(segid=seg, pdb=filename,
-                               first=None, last=None, auto=None,
-                               residues=None, mutate=None)
+        self.psfgen.add_segment(segid=seg, pdbfile=filename)
 
         print("Applying the following single-residue patches to P%s:\n" % frag)
         print("\t%s" % "\t".join(str(_) for _ in patches))
         for p in patches:
-            self.psfgen.patch(patchName=p.name, targets=p.targets())
+            self.psfgen.patch(patchname=p.name, targets=p.targets())
 
-        self.psfgen.readCoords(segid=seg, pdbfile=filename)
+        self.psfgen.read_coords(segid=seg, filename=filename)
 
         if old_top != -1:
             molecule.set_top(old_top)

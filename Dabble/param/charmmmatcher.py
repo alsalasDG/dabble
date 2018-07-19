@@ -69,7 +69,10 @@ class Patch(object):
         self.resids.append(resid)
 
     def targets(self):
-        return zip(self.segids, self.resids)
+        # TODO keep this up to date w psfgen
+        x = [(str(self.segids[i]), str(self.resids[i])) \
+                for i in range(len(self.segids))]
+        return x
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
